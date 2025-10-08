@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini E-Learning Platform</title>
+<style>
+  body { margin:0; font-family:'Poppins',sans-serif; display:flex; background:#f0f2f5; transition:all 0.3s; }
+  
+  /* Sidebar */
+  .sidebar { width:220px; background:#007bff; color:white; min-height:100vh; padding:20px 0; display:flex; flex-direction:column; align-items:center; transition: all 0.3s; position: fixed; top:0; left:0; z-index:1000; }
+  .sidebar h2 { margin-bottom:30px; text-align:center; }
+  .sidebar button { width:80%; margin:10px 0; padding:10px; border:none; border-radius:5px; cursor:pointer; color:#007bff; background:white; font-weight:bold; transition:background 0.3s; }
+  .sidebar button:hover { background:#e0e0e0; }
+  .sidebar.collapsed { left:-240px; }
+
+  /* Toggle button */
+  #sidebarToggle { display:none; position:fixed; top:10px; left:10px; background:#007bff; color:white; border:none; padding:10px; border-radius:5px; z-index:1100; cursor:pointer; }
+
+  /* Main content */
+  .main { flex:1; padding:20px; margin-left:220px; transition:all 0.3s; }
+  header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
+  header h1 { color:#007bff; margin:0; font-size:1.5em; }
+  
+  /* Auth form */
+  .auth { max-width:400px; background:white; padding:20px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-bottom:20px; }
+  .auth input { display:block; width:95%; margin:10px 0; padding:10px; border-radius:5px; border:1px solid #ccc; }
+  .auth button { width:100%; background:#007bff; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer; transition:background 0.3s; }
+  .auth button:hover { background:#0056b3; }
+
+  /* Courses */
+  .container { display:flex; flex-wrap:wrap; gap:20px; }
+  .course-card { background:white; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); width:250px; padding:15px; cursor:pointer; transition:transform 0.3s, box-shadow 0.3s; }
+  .course-card:hover { transform:scale(1.03); box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+  .course-card h3 { margin:10px 0; color:#007bff; }
+
+  /* Progress bar */
+  .progress-container { background:#e0e0e0; border-radius:5px; overflow:hidden; margin:10px 0; }
+  .progress-bar { height:10px; background:#28a745; width:0%; transition:width 0.3s; }
+
+  /* Details */
+  .details { background:white; padding:20px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-top:20px; display:none; }
+  button { cursor:pointer; transition:background 0.3s; margin-top:10px; }
+  button:hover { background-color:#0056b3; color:white; }
+  .completed { color:green; font-weight:bold; }
+  ul { list-style:none; padding-left:0; }
+  li { margin:5px 0; }
+  .hint { color:#ff6600; margin-left:20px; display:none; font-style:italic; }
+  #aiHint { background:#fff3cd; border:1px solid #ffeeba; padding:10px; border-radius:5px; margin-top:10px; display:none; color:#856404; }
+
+  /* Responsive */
+  @media (max-width:768px){
+    .sidebar { width:200px; left:-220px; }
+    .main { margin-left:0; }
+    #sidebarToggle { display:block; }
+  }
+</style>
+</head>
+<body>
+
+<button id="sidebarToggle">☰ Menu</button>
+
+<div class="sidebar" id="sidebar">
+  <h2>E-Learning</h2>
+  <button id="coursesBtn">Courses</button>
+  <button id="profileBtn">Profile</button>
+  <button id="logoutBtn" style="display:none;">Logout</button>
+  <button id="loginBtn">Login</button>
+  <button id="signupBtn">Sign Up</button>
+</div>
+
+<div class="main">
+  <header>
+    <h1>Mini E-Learning Platform</h1>
+    <p id="welcomeText">Please log in or sign up</p>
+  </header>
+
+  <div class="auth" id="authForm"></div>
+  <div class="container" id="coursesSection"></div>
+  <div class="details" id="courseDetails"></div>
+</div>
+
+<script>
+let currentUser = null;
+let aiTimer = null;
+const sidebar = document.getElementById('sidebar');
+const sidebarToggle = document.getElementById('sidebarToggle');
+
+sidebarToggle.onclick = () => {
+  sidebar.classList.toggle('collapsed');
+}
+
+// --- Courses & Hints ---
+const courses = [
+  {id:1, title:"HTML & CSS Fundamentals", description:"Basics of web structure and styling.", 
+   lessons:["Intro to HTML","Basic CSS","Web Page"], 
+   hints:["HTML is the structure of your page.","CSS styles your HTML elements.","Combine HTML and CSS for a full web page."], 
+   completed:false, lessonsCompleted:[]},
+  {id:2, title:"JavaScript Essentials", description:"Start programming for the web.", 
+   lessons:["Variables","Functions","DOM Manipulation"], 
+   hints:["Variables store data.","Functions perform actions.","DOM Manipulation changes HTML dynamically."], 
+   completed:false, lessonsCompleted:[]},
+  {id:3, title:"AI for Beginners", description:"Learn AI basics.", 
+   lessons:["What is AI?","Machine Learning","Demo"], 
+   hints:["AI simulates human intelligence.","ML is a subset of AI.","Try simple ML examples online."], 
+   completed:false, lessonsCompleted:[]}
+];
+
+const authForm=document.getElementById("authForm");
+const coursesSection=document.getElementById("coursesSection");
+const courseDetails=document.getElementById("courseDetails");
+const welcomeText=document.getElementById("welcomeText");
+const logoutBtn=document.getElementById("logoutBtn");
+const loginBtn=document.getElementById("loginBtn");
+const signupBtn=document.getElementById("signupBtn");
+const coursesBtn=document.getElementById("coursesBtn");
+const profileBtn=document.getElementById("profileBtn");
+
+// --- Auth ---
+loginBtn.onclick=showLogin;
+signupBtn.onclick=showSignup;
+logoutBtn.onclick=logout;
+
+function showLogin(){
+  authForm.style.display="block";
+  authForm.innerHTML=`
+    <h3>Login</h3>
+    <input type="text" id="loginUsername" placeholder="Username">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="login()">Login</button>
+  `;
+}
+
+function showSignup(){
+  authForm.style.display="block";
+  authForm.innerHTML=`
+    <h3>Sign Up</h3>
+    <input type="text" id="signupUsername" placeholder="Username">
+    <input type="password" id="signupPassword" placeholder="Password">
+    <button onclick="signup()">Sign Up</button>
+  `;
+}
+
+function login(){
+  const username=document.getElementById("loginUsername").value;
+  const password=document.getElementById("loginPassword").value;
+  const users=JSON.parse(localStorage.getItem("users")||"{}");
+  if(users[username] && users[username].password===password){
+    currentUser=username;
+    courses.forEach(c=>{
+      c.lessonsCompleted = users[username].courses?.[c.id]?.lessonsCompleted || [];
+      c.completed = c.lessonsCompleted.length===c.lessons.length;
+    });
+    authForm.style.display="none";
+    loginBtn.style.display="none";
+    signupBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    welcomeText.textContent=`Welcome, ${currentUser}!`;
+    showSection('courses');
+  } else alert("Invalid username or password!");
+}
+
+function signup(){
+  const username=document.getElementById("signupUsername").value;
+  const password=document.getElementById("signupPassword").value;
+  let users=JSON.parse(localStorage.getItem("users")||"{}");
+  if(users[username]){ alert("Username exists!"); return; }
+  users[username]={password, courses:{}};
+  localStorage.setItem("users",JSON.stringify(users));
+  alert("Sign up successful! Please login.");
+  showLogin();
+}
+
+function logout(){
+  currentUser=null;
+  courses.forEach(c=>{c.completed=false;c.lessonsCompleted=[];});
+  authForm.style.display="none";
+  coursesSection.innerHTML="";
+  courseDetails.style.display="none";
+  logoutBtn.style.display="none";
+  loginBtn.style.display="inline-block";
+  signupBtn.style.display="inline-block";
+  welcomeText.textContent="Please log in or sign up";
+  clearTimeout(aiTimer);
+}
+
+// --- Courses ---
+function displayCourses(){
+  coursesSection.innerHTML="";
+  coursesSection.style.display="flex";
+  courses.forEach(course=>{
+    const card=document.createElement("div");
+    card.className="course-card";
+    const progress = Math.round((course.lessonsCompleted?.length || 0)/course.lessons.length*100);
+    card.innerHTML=`
+      <h3>${course.title}</h3>
+      <p>${course.description}</p>
+      <div class="progress-container"><div class="progress-bar" style="width:${progress}%"></div></div>
+      <p>Status: <span class="${progress===100?'completed':''}">${progress===100?'Completed':'In Progress'}</span></p>
+    `;
+    card.onclick=()=>showCourseDetails(course.id);
+    coursesSection.appendChild(card);
+  });
+}
+
+function showCourseDetails(id){
+  const course=courses.find(c=>c.id===id);
+  courseDetails.style.display="block";
+  coursesSection.style.display="none";
+  const progress = Math.round((course.lessonsCompleted?.length || 0)/course.lessons.length*100);
+
+  courseDetails.innerHTML=`
+    <h2>${course.title}</h2>
+    <p>${course.description}</p>
+    <h4>Lessons:</h4>
+    <ul>
+      ${course.lessons.map((l,i)=>`<li>
+        <input type="checkbox" id="lesson-${i}" ${course.lessonsCompleted?.includes(i)?'checked':''} onchange="toggleLesson(${id},${i})">
+        ${l} 
+        <button onclick="showHint(${id},${i})">Show Hint</button>
+        <p id="hint-${id}-${i}" class="hint"></p>
+      </li>`).join('')}
+    </ul>
+    <div class="progress-container"><div class="progress-bar" style="width:${progress}%"></div></div>
+    <p>Status: <span class="${progress===100?'completed':''}">${progress===100?'Completed':'In Progress'}</span></p>
+    <div id="aiHint"></div>
+    ${progress<100?`<button onclick="nextLesson(${id})">Next Lesson</button>`:''}
+  `;
+
+  // AI suggestion timer
+  clearTimeout(aiTimer);
+  aiTimer = setTimeout(()=>{
+    const firstIncomplete = course.lessons.findIndex((_,i)=>!course.lessonsCompleted.includes(i));
+    if(firstIncomplete!==-1){
+      const aiDiv = document.getElementById("aiHint");
+      aiDiv.style.display="block";
+      aiDiv.textContent = `AI Suggestion: Try starting lesson "${course.lessons[firstIncomplete]}" for best progress.`;
+    }
+  }, 10000); // 10 sec
+}
+
+function showHint(courseId, lessonIndex){
+  const hintP = document.getElementById(`hint-${courseId}-${lessonIndex}`);
+  const course = courses.find(c=>c.id===courseId);
+  hintP.textContent = course.hints[lessonIndex];
+  hintP.style.display = "block";
+}
+
+function toggleLesson(courseId, lessonIndex){
+  const course=courses.find(c=>c.id===courseId);
+  if(!course.lessonsCompleted) course.lessonsCompleted=[];
+  if(course.lessonsCompleted.includes(lessonIndex)){
+    course.lessonsCompleted = course.lessonsCompleted.filter(i=>i!==lessonIndex);
+  } else {
+    course.lessonsCompleted.push(lessonIndex);
+  }
+  course.completed = course.lessonsCompleted.length===course.lessons.length;
+  saveProgress();
+  displayCourses();
+  showCourseDetails(courseId);
+}
+
+function nextLesson(courseId){
+  const course=courses.find(c=>c.id===courseId);
+  let nextLessonIndex=0;
+  while(course.lessonsCompleted.includes(nextLessonIndex)) nextLessonIndex++;
+  if(nextLessonIndex<course.lessons.length) course.lessonsCompleted.push(nextLessonIndex);
+  course.completed = course.lessonsCompleted.length===course.lessons.length;
+  saveProgress();
+  displayCourses();
+  showCourseDetails(courseId);
+}
+
+function saveProgress(){
+  const users=JSON.parse(localStorage.getItem("users"));
+  users[currentUser]={...users[currentUser], courses:{}};
+  courses.forEach(c=>{
+    users[currentUser].courses[c.id]={lessonsCompleted:c.lessonsCompleted};
+  });
+  localStorage.setItem("users",JSON.stringify(users));
+}
+
+// --- Section Switch ---
+coursesBtn.onclick=()=>{ if(currentUser) { displayCourses(); courseDetails.style.display='none'; authForm.style.display='none'; clearTimeout(aiTimer);} };
+profileBtn.onclick=()=>{ if(currentUser) { coursesSection.style.display='none'; courseDetails.style.display='block';
+courseDetails.innerHTML=`<h2>${currentUser}'s Profile</h2><h4>Courses Progress:</h4><ul>${courses.map(c=>`<li>${c.title}: ${Math.round((c.lessonsCompleted?.length||0)/c.lessons.length*100)}% complete</li>`).join('')}</ul>`; clearTimeout(aiTimer);} };
+</script>
+</body>
+</html>
