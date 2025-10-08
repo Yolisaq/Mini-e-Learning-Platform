@@ -73,4 +73,4 @@ This project is open-source and free to use.
 
 ## 👤 Author
 
-**Your Name** – [Your GitHub or Portfolio link] 🌐
+**Your Name** – https://github.com/Yolisaq/Mini-e-Learning-Platform.git 🌐
