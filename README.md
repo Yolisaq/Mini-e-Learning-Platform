@@ -29,7 +29,7 @@ This project allows learners to view courses, track lesson progress, mark course
 ## 📝 How to Use
 
 1. **📥 Clone or download** the project files.
-2. Open the `index.html` file in your preferred web browser.
+2. Open the `VibeCoding Prompt.html` file in your preferred web browser.
 3. **🆕 Sign Up** with a username and password.
 4. **🔑 Login** to access the courses and track progress.
 5. Click on a **📚 course** to view lessons.
